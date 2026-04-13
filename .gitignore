@@ -1,0 +1,21 @@
+*.iml
+.gradle
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+/app/build
+
+# IDE
+/.idea
+/.kotlin
+
+# Secrets
+local.properties
+*.jks
+*.keystore
+signing.properties
+
+# Local files (session logs, specs, APK analysis, article drafts)
+/local
