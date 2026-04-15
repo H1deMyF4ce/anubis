@@ -48,7 +48,11 @@ import sgnv.anubis.app.vpn.VpnControlMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
+fun SettingsScreen(
+    viewModel: MainViewModel,
+    onOpenRecovery: () -> Unit = {},
+    modifier: Modifier = Modifier
+) {
     val selectedClient by viewModel.selectedVpnClient.collectAsState()
     val installedClients by viewModel.installedVpnClients.collectAsState()
     val shizukuStatus by viewModel.shizukuStatus.collectAsState()
@@ -214,6 +218,31 @@ fun SettingsScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
 
         Spacer(Modifier.height(24.dp))
 
+        // Recovery entry
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onOpenRecovery() }
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Восстановление", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                    Text(
+                        "Разморозить приложения, очистить группы",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Text("›", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+
         // About
         Text("О приложении", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(8.dp))
@@ -349,4 +378,5 @@ fun SettingsScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
             }
         }
     }
+
 }

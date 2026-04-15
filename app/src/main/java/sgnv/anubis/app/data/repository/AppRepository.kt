@@ -18,6 +18,9 @@ class AppRepository(
     suspend fun getPackagesByGroup(group: AppGroup): Set<String> =
         dao.getPackageNamesByGroup(group).toSet()
 
+    suspend fun getAllManagedPackages(): List<String> =
+        AppGroup.entries.flatMap { getPackagesByGroup(it) }.distinct()
+
     suspend fun getAppsByGroup(group: AppGroup): List<ManagedApp> =
         dao.getByGroup(group)
 

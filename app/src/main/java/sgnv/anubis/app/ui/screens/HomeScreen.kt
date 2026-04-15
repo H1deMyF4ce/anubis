@@ -6,6 +6,7 @@ import android.graphics.Canvas
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -64,6 +65,7 @@ private val grayscaleFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setT
 fun HomeScreen(
     viewModel: MainViewModel,
     onRequestVpnPermission: (Intent) -> Unit = {},
+    onOpenRecovery: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val stealthState by viewModel.stealthState.collectAsState()
@@ -78,6 +80,8 @@ fun HomeScreen(
     val localApps by viewModel.localApps.collectAsState()
     val vpnOnlyApps by viewModel.vpnOnlyApps.collectAsState()
     val launchVpnApps by viewModel.launchVpnApps.collectAsState()
+    val installedApps by viewModel.installedApps.collectAsState()
+    val hasDisabledUserApps = installedApps.any { !it.isSystem && it.isDisabled }
 
     // Observing this triggers recomposition when any app is frozen/unfrozen
     val frozenVersion by viewModel.frozenVersion.collectAsState()
@@ -248,6 +252,45 @@ fun HomeScreen(
         // Network
         Spacer(Modifier.height(16.dp))
         NetworkCard(viewModel, networkInfo, networkLoading)
+
+        // Recovery hint — only shown when there are disabled user apps on device
+        if (hasDisabledUserApps) {
+            Spacer(Modifier.height(16.dp))
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onOpenRecovery),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer
+                )
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Что-то пошло не так?",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Text(
+                            "Разморозить приложения и очистить группы",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                    Text(
+                        "›",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+        }
+
         Spacer(Modifier.height(16.dp))
     }
 

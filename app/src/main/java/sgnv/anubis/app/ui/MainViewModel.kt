@@ -21,6 +21,8 @@ import sgnv.anubis.app.update.UpdateInfo
 import sgnv.anubis.app.vpn.SelectedVpnClient
 import sgnv.anubis.app.vpn.VpnClientManager
 import sgnv.anubis.app.vpn.VpnClientType
+import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.graphics.Bitmap
@@ -28,7 +30,9 @@ import android.graphics.Canvas
 import android.graphics.drawable.Icon
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -92,6 +96,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _updateCheckInProgress = MutableStateFlow(false)
     val updateCheckInProgress: StateFlow<Boolean> = _updateCheckInProgress
+
+    private val _resetCompleted = MutableSharedFlow<Int>()
+    val resetCompleted: SharedFlow<Int> = _resetCompleted
 
     init {
         vpnClientManager.startMonitoringVpn()
@@ -256,6 +263,50 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             repository.autoSelectRestricted()
             loadInstalledApps()
             loadGroupedApps()
+        }
+    }
+
+    fun unfreezeAllAndClear() {
+        viewModelScope.launch {
+            val allManaged = repository.getAllManagedPackages()
+            var unfrozenCount = 0
+            for (pkg in allManaged) {
+                if (shizukuManager.isAppFrozen(pkg)) {
+                    shizukuManager.unfreezeApp(pkg)
+                    unfrozenCount++
+                }
+                repository.removeApp(pkg)
+            }
+            loadInstalledApps()
+            loadGroupedApps()
+            orchestrator.syncState()
+            _resetCompleted.emit(unfrozenCount)
+        }
+    }
+
+    /** Emergency: scan PM for all user-disabled apps and unfreeze them.
+     *  Covers the case when Anubis was reinstalled and DB is empty but apps are still frozen. */
+    fun unfreezeAllUserDisabled() {
+        viewModelScope.launch {
+            val pm = getApplication<Application>().packageManager
+            val disabled = withContext(Dispatchers.IO) {
+                pm.getInstalledApplications(PackageManager.MATCH_DISABLED_COMPONENTS)
+                    .filter { !it.enabled && (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 }
+                    .map { it.packageName }
+            }
+            var unfrozenCount = 0
+            for (pkg in disabled) {
+                shizukuManager.unfreezeApp(pkg)
+                unfrozenCount++
+            }
+            // Also clear DB so orchestrator state stays consistent
+            for (pkg in repository.getAllManagedPackages()) {
+                repository.removeApp(pkg)
+            }
+            loadInstalledApps()
+            loadGroupedApps()
+            orchestrator.syncState()
+            _resetCompleted.emit(unfrozenCount)
         }
     }
 

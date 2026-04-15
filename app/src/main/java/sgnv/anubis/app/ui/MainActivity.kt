@@ -19,12 +19,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import sgnv.anubis.app.ui.screens.AppListScreen
 import sgnv.anubis.app.ui.screens.HomeScreen
+import sgnv.anubis.app.ui.screens.RecoveryScreen
 import sgnv.anubis.app.ui.screens.SettingsScreen
 import sgnv.anubis.app.ui.theme.AnubisTheme
 import sgnv.anubis.app.update.UpdateDialog
@@ -52,6 +54,7 @@ class MainActivity : ComponentActivity() {
                 val viewModel: MainViewModel = viewModel()
                 viewModelRef = viewModel
                 var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+                var showRecovery by rememberSaveable { mutableStateOf(false) }
 
                 Scaffold(
                     bottomBar = {
@@ -77,16 +80,27 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 ) { padding ->
-                    when (selectedTab) {
+                    if (showRecovery) {
+                        RecoveryScreen(
+                            viewModel = viewModel,
+                            onBack = { showRecovery = false },
+                            modifier = Modifier.padding(padding)
+                        )
+                    } else when (selectedTab) {
                         0 -> HomeScreen(
                             viewModel = viewModel,
                             onRequestVpnPermission = { intent ->
                                 vpnPermissionLauncher.launch(intent)
                             },
+                            onOpenRecovery = { showRecovery = true },
                             modifier = Modifier.padding(padding)
                         )
                         1 -> AppListScreen(viewModel, Modifier.padding(padding))
-                        2 -> SettingsScreen(viewModel, Modifier.padding(padding))
+                        2 -> SettingsScreen(
+                            viewModel = viewModel,
+                            onOpenRecovery = { showRecovery = true },
+                            modifier = Modifier.padding(padding)
+                        )
                     }
 
                     val updateInfo by viewModel.updateInfo.collectAsState()
